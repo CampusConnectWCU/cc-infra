@@ -86,7 +86,7 @@ jobs:
           MONGO_PORT="27017"
           MONGO_DB="CampusConnect-Prod"
           
-          echo "MongoDB config: Host=$MONGO_HOST, Port=$MONGO_PORT, DB=$MONGO_DB"
+          echo "Parsed MongoDB config: Host=$MONGO_HOST, Port=$MONGO_PORT, DB=$MONGO_DB"
           
           helm upgrade --install backend ./helm/backend \
             --set image.repository="${{ env.ACR_LOGIN_SERVER }}/${{ vars.BACKEND_IMAGE_NAME }}" \
@@ -94,6 +94,7 @@ jobs:
             --set redis.host="${{ vars.REDIS_HOSTNAME }}" \
             --set redis.port="6380" \
             --set redis.ssl="true" \
+            --set redis.password="${{ secrets.AZURE_REDIS_KEY }}" \
             --set domain="${{ vars.DOMAIN }}" \
             --set mongodb.host="$MONGO_HOST" \
             --set mongodb.port="$MONGO_PORT" \
