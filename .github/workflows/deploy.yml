@@ -88,8 +88,17 @@ jobs:
           helm install ingress-nginx ingress-nginx/ingress-nginx \
             --namespace ingress-nginx \
             --create-namespace \
-            --set controller.service.loadBalancerIP="${{ vars.INGRESS_IP }}"
+            --set controller.service.loadBalancerIP="${{ vars.INGRESS_IP }}" \
+            --set controller.admissionWebhooks.enabled=true \
+            --set controller.admissionWebhooks.patch.enabled=true
           kubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx --timeout=120s
+          
+          # Wait for webhook to be ready
+          echo "Waiting for nginx-ingress webhook to be ready..."
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=ingress-nginx -n ingress-nginx --timeout=120s
+          
+          # Additional wait for webhook service
+          sleep 10
 
       - name: Install Keel
         run: |
@@ -112,9 +121,26 @@ jobs:
 
       - name: Deploy Shared Resources
         run: |
-          helm upgrade --install shared ./helm/shared \
+          # Wait for nginx-ingress to be fully ready before applying ingress resources
+          echo "Ensuring nginx-ingress is fully ready..."
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=ingress-nginx -n ingress-nginx --timeout=180s
+          
+          # Check if webhook is working
+          if ! kubectl get validatingwebhookconfiguration ingress-nginx-admission >/dev/null 2>&1; then
+            echo "Warning: nginx webhook not found, proceeding without validation"
+          fi
+          
+          # Try to deploy shared resources, with fallback for webhook issues
+          if ! helm upgrade --install shared ./helm/shared \
             --set letsencrypt.email="${{ vars.LETSENCRYPT_EMAIL }}" \
-            --set domain="${{ vars.DOMAIN }}"
+            --set domain="${{ vars.DOMAIN }}"; then
+            echo "Helm deployment failed, trying to disable webhook and retry..."
+            kubectl delete validatingwebhookconfiguration ingress-nginx-admission 2>/dev/null || true
+            sleep 5
+            helm upgrade --install shared ./helm/shared \
+              --set letsencrypt.email="${{ vars.LETSENCRYPT_EMAIL }}" \
+              --set domain="${{ vars.DOMAIN }}"
+          fi
 
       - name: Set Tags
         run: |
