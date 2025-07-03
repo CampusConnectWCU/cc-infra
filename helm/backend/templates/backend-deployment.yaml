@@ -40,11 +40,11 @@ spec:
           value: "--max-old-space-size=768"
         resources:
           requests:
-            memory: "1Gi"
-            cpu: "250m"
+            memory: {{ .Values.resources.requests.memory }}
+            cpu: {{ .Values.resources.requests.cpu }}
           limits:
-            memory: "2Gi"
-            cpu: "500m"
+            memory: {{ .Values.resources.limits.memory }}
+            cpu: {{ .Values.resources.limits.cpu }}
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: false  # Backend needs to write logs

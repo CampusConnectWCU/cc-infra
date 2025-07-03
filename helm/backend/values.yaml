@@ -47,3 +47,12 @@ secrets:
   redis_key: ""
   encryption_key: ""
   session_secret: ""
+
+# Resource limits (reduced for B2s nodes)
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "200m"
+  limits:
+    memory: "1Gi"
+    cpu: "400m"

@@ -176,6 +176,13 @@ jobs:
             --set mongodb.host="$MONGO_HOST" \
             --set mongodb.port="$MONGO_PORT" \
             --set mongodb.database="$MONGO_DB" \
+            --set config.nodeEnv="production" \
+            --set config.host="0.0.0.0" \
+            --set config.port="3000" \
+            --set config.apiPrefix="/api" \
+            --set config.sessionLifetime="1h" \
+            --set config.cookieSecure="true" \
+            --set config.cookieSameSite="Strict" \
             --set-string secrets.mongodb_uri="${{ secrets.MONGODB_URI }}" \
             --set-string secrets.redis_key="${{ secrets.REDIS_KEY }}" \
             --set-string secrets.encryption_key="${{ secrets.ENCRYPTION_KEY }}" \

@@ -35,11 +35,11 @@ spec:
                 name: {{ .Values.configMap.name }}
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
             limits:
-              memory: "256Mi"
-              cpu: "200m"
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

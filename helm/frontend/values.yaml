@@ -11,17 +11,22 @@ service:
   type: ClusterIP
   port: 80
 
-# Application Configuration (static)
+# Application Configuration
 config:
-  nodeEnv: production
-  port: 80
-  apiUrl: ""  # Set via --set in GitHub Actions
-
-# Domain configuration (set via --set in GitHub Actions)
-domain: ""
+  apiUrl: "/api"
+  domain: ""
 
 # ConfigMap name
 configMap:
   name: campus-connect-frontend-config
+
+# Resource limits (optimized for B2s nodes)
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "50m"
+  limits:
+    memory: "128Mi"
+    cpu: "100m"
 
 
