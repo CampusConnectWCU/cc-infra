@@ -70,6 +70,10 @@ jobs:
       - name: Set TAG
         run: echo "TAG=${{ vars.TAG_POLICY }}" >> $GITHUB_ENV
 
+      - name: Ensure namespace exists
+        run: |
+          kubectl get namespace campus-connect || kubectl create namespace campus-connect
+
       - name: Deploy Backend
         run: |
           MONGO_HOST="campusconnect-prod.rzyiqr0.mongodb.net"
@@ -77,6 +81,7 @@ jobs:
           MONGO_DB="CampusConnect-Prod"
           echo "MongoDB config: Host=$MONGO_HOST, Port=$MONGO_PORT, DB=$MONGO_DB"
           helm upgrade --install backend ./helm/backend \
+            --namespace campus-connect --create-namespace \
             --set image.repository="${{ env.ACR_LOGIN_SERVER }}/${{ vars.BACKEND_IMAGE_NAME }}" \
             --set image.tag="${{ env.TAG }}" \
             --set redis.host="${{ vars.REDIS_HOSTNAME }}" \
@@ -94,6 +99,7 @@ jobs:
       - name: Deploy Frontend
         run: |
           helm upgrade --install frontend ./helm/frontend \
+            --namespace campus-connect --create-namespace \
             --set image.repository="${{ env.ACR_LOGIN_SERVER }}/${{ vars.FRONTEND_IMAGE_NAME }}" \
             --set image.tag="${{ env.TAG }}" \
             --set config.apiUrl="/api" \
@@ -108,6 +114,34 @@ jobs:
         run: |
           kubectl wait pod -l app=campus-connect-backend  -n campus-connect --for=condition=ready --timeout=300s
           kubectl wait pod -l app=campus-connect-frontend -n campus-connect --for=condition=ready --timeout=300s
+
+      - name: Check for crashed pods
+        run: |
+          set -e
+          # Check backend
+          BACKEND_READY=$(kubectl get pods -n campus-connect -l app=campus-connect-backend -o json | jq '[.items[] | select(.status.phase=="Running") | select(.status.containerStatuses[]?.ready==true)] | length')
+          BACKEND_CRASHED=$(kubectl get pods -n campus-connect -l app=campus-connect-backend | grep -E 'CrashLoopBackOff|Error' || true)
+          if [[ "$BACKEND_READY" -lt 1 ]]; then
+            echo "❌ No running and ready backend pods found!"
+            kubectl get pods -n campus-connect -l app=campus-connect-backend
+            exit 1
+          fi
+          if [[ -n "$BACKEND_CRASHED" ]]; then
+            echo "⚠️ Warning: Some backend pods are in a crashed state:"
+            echo "$BACKEND_CRASHED"
+          fi
+          # Check frontend
+          FRONTEND_READY=$(kubectl get pods -n campus-connect -l app=campus-connect-frontend -o json | jq '[.items[] | select(.status.phase=="Running") | select(.status.containerStatuses[]?.ready==true)] | length')
+          FRONTEND_CRASHED=$(kubectl get pods -n campus-connect -l app=campus-connect-frontend | grep -E 'CrashLoopBackOff|Error' || true)
+          if [[ "$FRONTEND_READY" -lt 1 ]]; then
+            echo "❌ No running and ready frontend pods found!"
+            kubectl get pods -n campus-connect -l app=campus-connect-frontend
+            exit 1
+          fi
+          if [[ -n "$FRONTEND_CRASHED" ]]; then
+            echo "⚠️ Warning: Some frontend pods are in a crashed state:"
+            echo "$FRONTEND_CRASHED"
+          fi
 
       - name: Test application endpoints
         run: |
