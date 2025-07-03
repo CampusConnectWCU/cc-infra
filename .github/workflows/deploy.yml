@@ -51,11 +51,25 @@ jobs:
             --create-namespace \
             --version v1.13.3 \
             --set installCRDs=true
-          kubectl rollout status deployment/cert-manager -n cert-manager --timeout=120s
-          kubectl rollout status deployment/cert-manager-webhook -n cert-manager --timeout=120s
-          kubectl rollout status deployment/cert-manager-cainjector -n cert-manager --timeout=120s
 
-      - name: Install NGINX Ingress Controller (if needed)
+          # Wait for the cert-manager ClusterIssuer CRD to exist (max 60s)
+          echo "Waiting for cert-manager CRDs to be created..."
+          for i in {1..12}; do
+            if kubectl get crd clusterissuers.cert-manager.io > /dev/null 2>&1; then
+              echo "clusterissuers.cert-manager.io CRD is present."
+              break
+            fi
+            echo "Waiting for clusterissuers.cert-manager.io CRD to be created... ($i/12)"
+            sleep 5
+          done
+
+          # Verify CRD exists before proceeding
+          if ! kubectl get crd clusterissuers.cert-manager.io > /dev/null 2>&1; then
+            echo "❌ Timed out waiting for clusterissuers.cert-manager.io CRD."
+            exit 1
+          fi
+
+      - name: Install NGINX Ingress Controller
         run: |
           kubectl get namespace ingress-nginx || \
           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx && \
@@ -66,7 +80,7 @@ jobs:
             --set controller.service.loadBalancerIP="${{ vars.INGRESS_IP }}"
           kubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx --timeout=120s
 
-      - name: Install Keel (if needed)
+      - name: Install Keel
         run: |
           kubectl get namespace keel || \
           helm repo add keel https://charts.keel.sh && \
