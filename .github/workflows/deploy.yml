@@ -2,15 +2,6 @@ name: Deploy to Azure Kubernetes Service
 
 on:
   workflow_dispatch:
-    inputs:
-      backend_tag:
-        description: "Backend image tag to deploy"
-        required: true
-        default: "latest"
-      frontend_tag:
-        description: "Frontend image tag to deploy"
-        required: true
-        default: "latest"
   push:
     branches: [main]
     paths:
@@ -76,6 +67,9 @@ jobs:
             --set letsencrypt.email="${{ vars.LETSENCRYPT_EMAIL }}" \
             --set domain="${{ vars.DOMAIN }}"
 
+      - name: Set TAG
+        run: echo "TAG=${{ vars.TAG_POLICY }}" >> $GITHUB_ENV
+
       - name: Deploy Backend
         run: |
           MONGO_HOST="campusconnect-prod.rzyiqr0.mongodb.net"
@@ -84,7 +78,7 @@ jobs:
           echo "MongoDB config: Host=$MONGO_HOST, Port=$MONGO_PORT, DB=$MONGO_DB"
           helm upgrade --install backend ./helm/backend \
             --set image.repository="${{ env.ACR_LOGIN_SERVER }}/${{ vars.BACKEND_IMAGE_NAME }}" \
-            --set image.tag="${{ github.event.inputs.backend_tag }}" \
+            --set image.tag="${{ env.TAG }}" \
             --set redis.host="${{ vars.REDIS_HOSTNAME }}" \
             --set redis.port="6380" \
             --set redis.ssl="true" \
@@ -101,7 +95,7 @@ jobs:
         run: |
           helm upgrade --install frontend ./helm/frontend \
             --set image.repository="${{ env.ACR_LOGIN_SERVER }}/${{ vars.FRONTEND_IMAGE_NAME }}" \
-            --set image.tag="${{ github.event.inputs.frontend_tag }}" \
+            --set image.tag="${{ env.TAG }}" \
             --set config.apiUrl="/api" \
             --set domain="${{ vars.DOMAIN }}"
 
