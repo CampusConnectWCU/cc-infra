@@ -1,15 +1,15 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: { { .Values.configMap.name } }
+  name: {{ .Values.configMap.name }}
   labels:
     app: campus-connect-frontend
 data:
   # Application Configuration
-  NODE_ENV: { { .Values.config.nodeEnv } }
+  NODE_ENV: {{ .Values.config.nodeEnv }}
   PORT: "{{ .Values.config.port }}"
-  API_URL: { { .Values.config.apiUrl | quote } }
-  DOMAIN: { { .Values.domain | quote } }
+  API_URL: {{ .Values.config.apiUrl | quote }}
+  DOMAIN: {{ .Values.domain | quote }}
 
   # Note: The following will be injected by GitHub Actions:
   # - DOMAIN (from shared values)
