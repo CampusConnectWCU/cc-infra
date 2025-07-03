@@ -35,7 +35,7 @@ variable "vm_size" {
 variable "allowed_ssh_ip" {
   description = "IP address allowed for SSH access (whitelisted IPs)"
   type        = string
-  default     = ""  # Infra/terraform/deploy.sh will update this
+  default     = "174.220.80.160/32"
 }
 
 variable "environment" {
