@@ -125,22 +125,31 @@ jobs:
           echo "Ensuring nginx-ingress is fully ready..."
           kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=ingress-nginx -n ingress-nginx --timeout=180s
           
-          # Check if webhook is working
-          if ! kubectl get validatingwebhookconfiguration ingress-nginx-admission >/dev/null 2>&1; then
-            echo "Warning: nginx webhook not found, proceeding without validation"
-          fi
+          # Wait for cert-manager webhook to be ready
+          echo "Ensuring cert-manager webhook is ready..."
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=cert-manager -n cert-manager --timeout=180s
           
-          # Try to deploy shared resources, with fallback for webhook issues
-          if ! helm upgrade --install shared ./helm/shared \
+          # Disable problematic webhooks temporarily
+          echo "Temporarily disabling webhooks to avoid HTTPS/HTTP issues..."
+          kubectl delete validatingwebhookconfiguration ingress-nginx-admission 2>/dev/null || true
+          kubectl delete mutatingwebhookconfiguration cert-manager-webhook 2>/dev/null || true
+          kubectl delete validatingwebhookconfiguration cert-manager-webhook 2>/dev/null || true
+          
+          # Wait a moment for webhook deletion to propagate
+          sleep 10
+          
+          # Deploy shared resources without webhook interference
+          echo "Deploying shared resources..."
+          helm upgrade --install shared ./helm/shared \
             --set letsencrypt.email="${{ vars.LETSENCRYPT_EMAIL }}" \
-            --set domain="${{ vars.DOMAIN }}"; then
-            echo "Helm deployment failed, trying to disable webhook and retry..."
-            kubectl delete validatingwebhookconfiguration ingress-nginx-admission 2>/dev/null || true
-            sleep 5
-            helm upgrade --install shared ./helm/shared \
-              --set letsencrypt.email="${{ vars.LETSENCRYPT_EMAIL }}" \
-              --set domain="${{ vars.DOMAIN }}"
-          fi
+            --set domain="${{ vars.DOMAIN }}"
+          
+          # Re-enable webhooks after deployment
+          echo "Re-enabling webhooks..."
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml 2>/dev/null || true
+          
+          # Wait for webhooks to be ready again
+          sleep 15
 
       - name: Set Tags
         run: |
