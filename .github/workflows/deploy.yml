@@ -18,13 +18,12 @@ on:
 
 env:
   ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
-  CLUSTER_NAME: ${{ vars.CLUSTER_NAME }}
-  RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
+  CLUSTER_NAME:     ${{ vars.CLUSTER_NAME }}
+  RESOURCE_GROUP:   ${{ vars.RESOURCE_GROUP }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,7 +55,6 @@ jobs:
             --create-namespace \
             --version v1.13.3 \
             --set installCRDs=true
-          # Wait for cert-manager to be ready
           kubectl rollout status deployment/cert-manager -n cert-manager --timeout=120s
           kubectl rollout status deployment/cert-manager-webhook -n cert-manager --timeout=120s
           kubectl rollout status deployment/cert-manager-cainjector -n cert-manager --timeout=120s
@@ -70,7 +68,6 @@ jobs:
             --namespace ingress-nginx \
             --create-namespace \
             --set controller.service.loadBalancerIP="${{ vars.INGRESS_IP }}"
-          # Wait for ingress controller to be ready
           kubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx --timeout=120s
 
       - name: Deploy Shared Resources
@@ -81,16 +78,13 @@ jobs:
 
       - name: Deploy Backend
         run: |
-          # Set MongoDB configuration manually
           MONGO_HOST="campusconnect-prod.rzyiqr0.mongodb.net"
           MONGO_PORT="27017"
           MONGO_DB="CampusConnect-Prod"
-          
-          echo "Parsed MongoDB config: Host=$MONGO_HOST, Port=$MONGO_PORT, DB=$MONGO_DB"
-          
+          echo "MongoDB config: Host=$MONGO_HOST, Port=$MONGO_PORT, DB=$MONGO_DB"
           helm upgrade --install backend ./helm/backend \
             --set image.repository="${{ env.ACR_LOGIN_SERVER }}/${{ vars.BACKEND_IMAGE_NAME }}" \
-            --set image.tag="${{ github.event.inputs.backend_tag || 'latest' }}" \
+            --set image.tag="${{ github.event.inputs.backend_tag }}" \
             --set redis.host="${{ vars.REDIS_HOSTNAME }}" \
             --set redis.port="6380" \
             --set redis.ssl="true" \
@@ -107,82 +101,52 @@ jobs:
         run: |
           helm upgrade --install frontend ./helm/frontend \
             --set image.repository="${{ env.ACR_LOGIN_SERVER }}/${{ vars.FRONTEND_IMAGE_NAME }}" \
-            --set image.tag="${{ github.event.inputs.frontend_tag || 'latest' }}" \
+            --set image.tag="${{ github.event.inputs.frontend_tag }}" \
             --set config.apiUrl="/api" \
             --set domain="${{ vars.DOMAIN }}"
 
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/campus-connect-backend  -n campus-connect --timeout=300s
+          kubectl rollout status deployment/campus-connect-frontend -n campus-connect --timeout=300s
+
       - name: Wait for pods to be ready
         run: |
-          echo "Waiting for backend pods to be ready..."
-          kubectl rollout status deployment/campus-connect-backend --timeout=300s
-          
-          echo "Waiting for frontend pods to be ready..."
-          kubectl rollout status deployment/campus-connect-frontend --timeout=300s
-
-      - name: Verify deployment health
-        run: |
-          echo "=== Checking pod status ==="
-          kubectl get pods -l app=campus-connect-backend
-          kubectl get pods -l app=campus-connect-frontend
-          
-          echo "=== Checking services ==="
-          kubectl get services -l app=campus-connect-backend
-          kubectl get services -l app=campus-connect-frontend
-          
-          echo "=== Checking ingress ==="
-          kubectl get ingress campus-connect-ingress
-          
-          echo "=== Verifying pod health ==="
-          # Check that all pods are Running and Ready
-          BACKEND_PODS=$(kubectl get pods -l app=campus-connect-backend --no-headers | wc -l)
-          BACKEND_READY=$(kubectl get pods -l app=campus-connect-backend --no-headers | grep "Running" | wc -l)
-          
-          FRONTEND_PODS=$(kubectl get pods -l app=campus-connect-frontend --no-headers | wc -l)
-          FRONTEND_READY=$(kubectl get pods -l app=campus-connect-frontend --no-headers | grep "Running" | wc -l)
-          
-          echo "Backend pods: $BACKEND_READY/$BACKEND_PODS ready"
-          echo "Frontend pods: $FRONTEND_READY/$FRONTEND_PODS ready"
-          
-          if [ "$BACKEND_READY" -eq 0 ] || [ "$FRONTEND_READY" -eq 0 ]; then
-            echo "❌ Deployment failed - pods are not running"
-            echo "=== Backend pod logs ==="
-            kubectl logs -l app=campus-connect-backend --tail=50 || true
-            echo "=== Frontend pod logs ==="
-            kubectl logs -l app=campus-connect-frontend --tail=50 || true
-            exit 1
-          fi
-          
-          echo "✅ All pods are running successfully!"
+          kubectl wait pod -l app=campus-connect-backend  -n campus-connect --for=condition=ready --timeout=300s
+          kubectl wait pod -l app=campus-connect-frontend -n campus-connect --for=condition=ready --timeout=300s
 
       - name: Test application endpoints
         run: |
+          set -euo pipefail
           echo "=== Testing application health ==="
-          
-          # Get the ingress external IP
-          INGRESS_IP=$(kubectl get service -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-          
-          if [ -z "$INGRESS_IP" ]; then
-            echo "❌ Ingress IP not available yet"
-            kubectl get service -n ingress-nginx
+
+          # Wait up to 5 minutes for Ingress IP
+          for i in {1..30}; do
+            INGRESS_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller \
+              -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+            if [[ -n "$INGRESS_IP" ]]; then
+              echo "Ingress IP: $INGRESS_IP"
+              break
+            fi
+            echo "Waiting for Ingress IP ($i/30)…"
+            sleep 10
+          done
+          if [[ -z "${INGRESS_IP:-}" ]]; then
+            echo "❌ Ingress IP not available"
             exit 1
           fi
-          
-          echo "Ingress IP: $INGRESS_IP"
-          
-          # Test frontend (should return 200)
-          echo "Testing frontend..."
-          FRONTEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$INGRESS_IP/ || echo "000")
-          echo "Frontend status: $FRONTEND_STATUS"
-          
-          # Test backend health endpoint
-          echo "Testing backend health..."
-          BACKEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$INGRESS_IP/api/health || echo "000")
-          echo "Backend health status: $BACKEND_STATUS"
-          
-          if [ "$FRONTEND_STATUS" != "200" ] || [ "$BACKEND_STATUS" != "200" ]; then
-            echo "❌ Application health checks failed"
-            echo "Frontend: $FRONTEND_STATUS, Backend: $BACKEND_STATUS"
-            exit 1
-          fi
-          
-          echo "✅ Application health checks passed!"
+
+          # Poll health endpoints
+          for i in {1..30}; do
+            FRONTEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://$INGRESS_IP/")
+            BACKEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://$INGRESS_IP/api/health")
+            if [[ "$FRONTEND_STATUS" == "200" && "$BACKEND_STATUS" == "200" ]]; then
+              echo "✅ Application health checks passed!"
+              exit 0
+            fi
+            echo "Health not ready: frontend=$FRONTEND_STATUS backend=$BACKEND_STATUS ($i/30)"
+            sleep 10
+          done
+
+          echo "❌ Application health checks failed after waiting"
+          exit 1
