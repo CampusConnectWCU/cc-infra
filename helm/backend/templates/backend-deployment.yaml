@@ -35,15 +35,15 @@ spec:
           limits:
             memory: "2Gi"
             cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: api/health
-            port: {{ .Values.service.port }}
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: api/health
-            port: {{ .Values.service.port }}
-          initialDelaySeconds: 5
-          periodSeconds: 5 
+        # livenessProbe:
+        #   httpGet:
+        #     path: api/health
+        #     port: {{ .Values.service.port }}
+        #   initialDelaySeconds: 30
+        #   periodSeconds: 10
+        # readinessProbe:
+        #   httpGet:
+        #     path: api/health
+        #     port: {{ .Values.service.port }}
+        #   initialDelaySeconds: 5
+        #   periodSeconds: 5 
