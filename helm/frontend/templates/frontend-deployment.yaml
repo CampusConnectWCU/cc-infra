@@ -4,6 +4,11 @@ metadata:
   name: campus-connect-frontend
   labels:
     app: campus-connect-frontend
+  annotations:
+    keel.sh/policy: "force"
+    keel.sh/trigger: "poll"
+    keel.sh/pollSchedule: "@every 1m"
+    keel.sh/images: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -14,6 +19,11 @@ spec:
       labels:
         app: campus-connect-frontend
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
         - name: frontend
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -31,17 +41,26 @@ spec:
               memory: "256Mi"
               cpu: "200m"
           securityContext:
-            runAsNonRoot: false
-            runAsUser: 0
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
           livenessProbe:
             httpGet:
               path: /
               port: {{ .Values.service.port }}
             initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /
               port: {{ .Values.service.port }}
             initialDelaySeconds: 5
             periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3

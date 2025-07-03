@@ -9,14 +9,14 @@ locals {
   # Redis Cache
   redis_name      = "${var.prefix}-redis"
 
-  # Static Public IP for your ingress controller
+  # Static Public IP for ingress controller
   ingress_ip_name = "${var.prefix}-ip"
 
   # AKS cluster
   aks_name        = "${var.prefix}-aks"
   aks_dns         = var.prefix
 
-  # Your existing (IONOS-registered) domain
+  # (IONOS-registered) domain
   dns_zone        = var.domain_name
 
   # Fully qualified frontend hostname

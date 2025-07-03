@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: campus-connect-quota
+  namespace: campus-connect
+spec:
+  hard:
+    requests.cpu: "2"
+    requests.memory: 4Gi
+    limits.cpu: "4"
+    limits.memory: 8Gi
+    persistentvolumeclaims: "4"
+    services: "10"
+    services.loadbalancers: "2"
+    services.nodeports: "0"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: campus-connect-limits
+  namespace: campus-connect
+spec:
+  limits:
+  - default:
+      cpu: 500m
+      memory: 1Gi
+    defaultRequest:
+      cpu: 100m
+      memory: 128Mi
+    type: Container
+  - default:
+      cpu: 1
+      memory: 2Gi
+    defaultRequest:
+      cpu: 250m
+      memory: 512Mi
+    type: Pod 

@@ -1,0 +1,21 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: backend-pdb
+  namespace: campus-connect
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: campus-connect-backend
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend-pdb
+  namespace: campus-connect
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: campus-connect-frontend 

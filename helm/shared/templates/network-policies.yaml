@@ -89,6 +89,8 @@ spec:
     ports:
     - protocol: TCP
       port: 6380  # Redis port
+    - protocol: TCP
+      port: 27017  # MongoDB port
 ---
 # Frontend Network Policy
 apiVersion: networking.k8s.io/v1
@@ -177,3 +179,77 @@ spec:
     ports:
     - protocol: TCP
       port: 80
+---
+# Cert-Manager Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cert-manager-policy
+  namespace: cert-manager
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cert-manager
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+    ports:
+    - protocol: TCP
+      port: 9402
+  egress:
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - protocol: TCP
+      port: 443  # Let's Encrypt ACME
+    - protocol: TCP
+      port: 80   # HTTP-01 challenge
+---
+# Keel Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: keel-policy
+  namespace: keel
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: keel
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 9300
+  egress:
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system

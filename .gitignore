@@ -1,2 +1,10 @@
 .terraform
 .terraform.lock.hcl
+tf
+terraform.tfstate.backup
+tfplan
+*.bak
+*.log
+*.txt
+*.json
+security-audit.sh
