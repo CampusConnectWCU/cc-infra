@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: campus-connect-frontend
+  labels:
+    app: campus-connect-frontend
+spec:
+  replicas: { { .Values.replicaCount } }
+  selector:
+    matchLabels:
+      app: campus-connect-frontend
+  template:
+    metadata:
+      labels:
+        app: campus-connect-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: { { .Values.image.pullPolicy } }
+          ports:
+            - containerPort: { { .Values.service.port } }
+          envFrom:
+            - configMapRef:
+                name: { { .Values.configMap.name } }
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: { { .Values.service.port } }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: { { .Values.service.port } }
+            initialDelaySeconds: 5
+            periodSeconds: 5

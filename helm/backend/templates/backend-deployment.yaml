@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: campus-connect-backend
+  labels:
+    app: campus-connect-backend
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: campus-connect-backend
+  template:
+    metadata:
+      labels:
+        app: campus-connect-backend
+    spec:
+      containers:
+      - name: backend
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.service.port }}
+        envFrom:
+        - configMapRef:
+            name: {{ .Values.configMap.name }}
+        - secretRef:
+            name: {{ .Values.configMap.name }}-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.service.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.service.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5 

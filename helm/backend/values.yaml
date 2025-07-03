@@ -1,0 +1,33 @@
+# Backend Application Configuration
+image:
+  repository: ""  # Set via --set in GitHub Actions
+  tag: ""         # Set via --set in GitHub Actions
+  pullPolicy: Always
+
+replicaCount: 1
+
+service:
+  name: campus-connect-backend-service
+  type: ClusterIP
+  port: 3000
+
+# Application Configuration (static)
+config:
+  nodeEnv: production
+  port: 3000
+  host: "0.0.0.0"
+  apiPrefix: "api"
+  sessionLifetime: "86400000"
+  cookieSecure: "true"  # HTTPS cookies for production
+  cookieSameSite: "strict"
+  logLevel: "info"
+
+# Redis configuration (all set via --set)
+redis:
+  host: ""   # Set via --set in GitHub Actions
+  port: ""   # Set via --set in GitHub Actions
+  ssl: ""    # Set via --set in GitHub Actions
+
+# ConfigMap and Secret names
+configMap:
+  name: campus-connect-backend-config

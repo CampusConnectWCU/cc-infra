@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: { { .Values.configMap.name } }
+  labels:
+    app: campus-connect-backend
+data:
+  # Application Configuration
+  NODE_ENV: { { .Values.config.nodeEnv } }
+  HOST: { { .Values.config.host } }
+  PORT: "{{ .Values.config.port }}"
+  API_PREFIX: { { .Values.config.apiPrefix } }
+  SESSION_LIFETIME: { { .Values.config.sessionLifetime } }
+  COOKIE_SECURE: { { .Values.config.cookieSecure } }
+  COOKIE_SAME_SITE: { { .Values.config.cookieSameSite } }
+  LOG_LEVEL: { { .Values.config.logLevel } }
+  REDIS_HOST: { { .Values.redis.host | quote } }
+  REDIS_PORT: { { .Values.redis.port | quote } }
+  REDIS_SSL: { { .Values.redis.ssl | quote } }
+  DOMAIN: { { .Values.domain | quote } }
+
+  # Note: The following will be injected by GitHub Actions:
+  # - CORS_ORIGIN (from shared values)
+  # - MONGODB_ATLAS (set to "true")

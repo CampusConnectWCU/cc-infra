@@ -1,0 +1,81 @@
+name: Deploy to Azure Kubernetes Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      backend_tag:
+        description: "Backend image tag to deploy"
+        required: true
+        default: "latest"
+      frontend_tag:
+        description: "Frontend image tag to deploy"
+        required: true
+        default: "latest"
+  push:
+    branches: [main]
+    paths:
+      - "helm/**"
+
+env:
+  ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
+  CLUSTER_NAME: ${{ vars.CLUSTER_NAME }}
+  RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.CLUSTER_NAME }} \
+            --overwrite-existing
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: "3.12.0"
+
+      - name: Deploy Shared Resources
+        run: |
+          helm upgrade --install shared ./helm/shared \
+            --set letsencrypt.email="${{ vars.LETSENCRYPT_EMAIL }}" \
+            --set domain="${{ vars.DOMAIN }}"
+
+      - name: Deploy Backend
+        run: |
+          helm upgrade --install backend ./helm/backend \
+            --set image.repository="${{ env.ACR_LOGIN_SERVER }}/campus-connect-backend" \
+            --set image.tag="${{ github.event.inputs.backend_tag || 'latest' }}" \
+            --set redis.host="${{ vars.REDIS_HOSTNAME }}" \
+            --set redis.port="6380" \
+            --set redis.ssl="true" \
+            --set domain="${{ vars.DOMAIN }}" \
+            --set-string secrets.mongodb_uri="${{ secrets.MONGODB_URI }}" \
+            --set-string secrets.redis_key="${{ secrets.AZURE_REDIS_KEY }}" \
+            --set-string secrets.encryption_key="${{ secrets.ENCRYPTION_KEY }}" \
+            --set-string secrets.session_secret="${{ secrets.SESSION_SECRET }}"
+
+      - name: Deploy Frontend
+        run: |
+          helm upgrade --install frontend ./helm/frontend \
+            --set image.repository="${{ env.ACR_LOGIN_SERVER }}/campus-connect-frontend" \
+            --set image.tag="${{ github.event.inputs.frontend_tag || 'latest' }}" \
+            --set config.apiUrl="/api" \
+            --set domain="${{ vars.DOMAIN }}"
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -l app=campus-connect-backend
+          kubectl get pods -l app=campus-connect-frontend
+          kubectl get ingress campus-connect-ingress

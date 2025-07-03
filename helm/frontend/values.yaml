@@ -1,0 +1,24 @@
+# Frontend Application Configuration
+image:
+  repository: ""  # Set via --set in GitHub Actions
+  tag: ""         # Set via --set in GitHub Actions
+  pullPolicy: Always
+
+replicaCount: 1
+
+service:
+  name: campus-connect-frontend-service
+  type: ClusterIP
+  port: 80
+
+# Application Configuration (static)
+config:
+  nodeEnv: production
+  port: 80
+  apiUrl: ""  # Set via --set in GitHub Actions
+
+# ConfigMap name
+configMap:
+  name: campus-connect-frontend-config
+
+
