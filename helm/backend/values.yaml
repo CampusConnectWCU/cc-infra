@@ -28,6 +28,12 @@ redis:
   port: ""   # Set via --set in GitHub Actions
   ssl: ""    # Set via --set in GitHub Actions
 
+# MongoDB configuration (set via --set in GitHub Actions)
+mongodb:
+  host: ""      # Set via --set in GitHub Actions
+  port: ""      # Set via --set in GitHub Actions
+  database: ""  # Set via --set in GitHub Actions
+
 # Domain configuration (set via --set in GitHub Actions)
 domain: ""
 

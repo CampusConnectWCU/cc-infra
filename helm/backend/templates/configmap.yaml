@@ -18,3 +18,7 @@ data:
   REDIS_PORT: {{ .Values.redis.port | quote }}
   REDIS_SSL: {{ .Values.redis.ssl | quote }}
   DOMAIN: {{ .Values.domain | quote }}
+  # MongoDB Configuration (parsed from MONGODB_URI)
+  MONGO_HOST: {{ .Values.mongodb.host | quote }}
+  MONGO_PORT: {{ .Values.mongodb.port | quote }}
+  MONGO_DB: {{ .Values.mongodb.database | quote }}

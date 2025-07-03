@@ -81,6 +81,14 @@ jobs:
 
       - name: Deploy Backend
         run: |
+          # Parse MongoDB URI to extract host, port, and database
+          MONGODB_URI="${{ secrets.MONGODB_URI }}"
+          MONGO_HOST=$(echo "$MONGODB_URI" | sed -n 's/.*@\([^:]*\).*/\1/p')
+          MONGO_PORT=$(echo "$MONGODB_URI" | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
+          MONGO_DB=$(echo "$MONGODB_URI" | sed -n 's/.*\/\([^?]*\).*/\1/p') 
+          
+          echo "Parsed MongoDB config: Host=$MONGO_HOST, Port=$MONGO_PORT, DB=$MONGO_DB"
+          
           helm upgrade --install backend ./helm/backend \
             --set image.repository="${{ env.ACR_LOGIN_SERVER }}/${{ vars.BACKEND_IMAGE_NAME }}" \
             --set image.tag="${{ github.event.inputs.backend_tag || 'latest' }}" \
@@ -88,6 +96,9 @@ jobs:
             --set redis.port="6380" \
             --set redis.ssl="true" \
             --set domain="${{ vars.DOMAIN }}" \
+            --set mongodb.host="$MONGO_HOST" \
+            --set mongodb.port="$MONGO_PORT" \
+            --set mongodb.database="$MONGO_DB" \
             --set-string secrets.mongodb_uri="${{ secrets.MONGODB_URI }}" \
             --set-string secrets.redis_key="${{ secrets.AZURE_REDIS_KEY }}" \
             --set-string secrets.encryption_key="${{ secrets.ENCRYPTION_KEY }}" \
@@ -101,8 +112,78 @@ jobs:
             --set config.apiUrl="/api" \
             --set domain="${{ vars.DOMAIN }}"
 
-      - name: Verify deployment
+      - name: Wait for pods to be ready
         run: |
+          echo "Waiting for backend pods to be ready..."
+          kubectl rollout status deployment/campus-connect-backend --timeout=300s
+          
+          echo "Waiting for frontend pods to be ready..."
+          kubectl rollout status deployment/campus-connect-frontend --timeout=300s
+
+      - name: Verify deployment health
+        run: |
+          echo "=== Checking pod status ==="
           kubectl get pods -l app=campus-connect-backend
           kubectl get pods -l app=campus-connect-frontend
+          
+          echo "=== Checking services ==="
+          kubectl get services -l app=campus-connect-backend
+          kubectl get services -l app=campus-connect-frontend
+          
+          echo "=== Checking ingress ==="
           kubectl get ingress campus-connect-ingress
+          
+          echo "=== Verifying pod health ==="
+          # Check that all pods are Running and Ready
+          BACKEND_PODS=$(kubectl get pods -l app=campus-connect-backend --no-headers | wc -l)
+          BACKEND_READY=$(kubectl get pods -l app=campus-connect-backend --no-headers | grep "Running" | wc -l)
+          
+          FRONTEND_PODS=$(kubectl get pods -l app=campus-connect-frontend --no-headers | wc -l)
+          FRONTEND_READY=$(kubectl get pods -l app=campus-connect-frontend --no-headers | grep "Running" | wc -l)
+          
+          echo "Backend pods: $BACKEND_READY/$BACKEND_PODS ready"
+          echo "Frontend pods: $FRONTEND_READY/$FRONTEND_PODS ready"
+          
+          if [ "$BACKEND_READY" -eq 0 ] || [ "$FRONTEND_READY" -eq 0 ]; then
+            echo "❌ Deployment failed - pods are not running"
+            echo "=== Backend pod logs ==="
+            kubectl logs -l app=campus-connect-backend --tail=50 || true
+            echo "=== Frontend pod logs ==="
+            kubectl logs -l app=campus-connect-frontend --tail=50 || true
+            exit 1
+          fi
+          
+          echo "✅ All pods are running successfully!"
+
+      - name: Test application endpoints
+        run: |
+          echo "=== Testing application health ==="
+          
+          # Get the ingress external IP
+          INGRESS_IP=$(kubectl get service -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          
+          if [ -z "$INGRESS_IP" ]; then
+            echo "❌ Ingress IP not available yet"
+            kubectl get service -n ingress-nginx
+            exit 1
+          fi
+          
+          echo "Ingress IP: $INGRESS_IP"
+          
+          # Test frontend (should return 200)
+          echo "Testing frontend..."
+          FRONTEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$INGRESS_IP/ || echo "000")
+          echo "Frontend status: $FRONTEND_STATUS"
+          
+          # Test backend health endpoint
+          echo "Testing backend health..."
+          BACKEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$INGRESS_IP/api/health || echo "000")
+          echo "Backend health status: $BACKEND_STATUS"
+          
+          if [ "$FRONTEND_STATUS" != "200" ] || [ "$BACKEND_STATUS" != "200" ]; then
+            echo "❌ Application health checks failed"
+            echo "Frontend: $FRONTEND_STATUS, Backend: $BACKEND_STATUS"
+            exit 1
+          fi
+          
+          echo "✅ Application health checks passed!"
