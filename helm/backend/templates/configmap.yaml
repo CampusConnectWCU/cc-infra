@@ -18,7 +18,3 @@ data:
   REDIS_PORT: { { .Values.redis.port | quote } }
   REDIS_SSL: { { .Values.redis.ssl | quote } }
   DOMAIN: { { .Values.domain | quote } }
-
-  # Note: The following will be injected by GitHub Actions:
-  # - CORS_ORIGIN (from shared values)
-  # - MONGODB_ATLAS (set to "true")

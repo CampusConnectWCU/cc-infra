@@ -55,7 +55,7 @@ jobs:
       - name: Deploy Backend
         run: |
           helm upgrade --install backend ./helm/backend \
-            --set image.repository="${{ env.ACR_LOGIN_SERVER }}/campus-connect-backend" \
+            --set image.repository="${{ env.ACR_LOGIN_SERVER }}/${{ vars.BACKEND_IMAGE_NAME }}" \
             --set image.tag="${{ github.event.inputs.backend_tag || 'latest' }}" \
             --set redis.host="${{ vars.REDIS_HOSTNAME }}" \
             --set redis.port="6380" \
@@ -69,7 +69,7 @@ jobs:
       - name: Deploy Frontend
         run: |
           helm upgrade --install frontend ./helm/frontend \
-            --set image.repository="${{ env.ACR_LOGIN_SERVER }}/campus-connect-frontend" \
+            --set image.repository="${{ env.ACR_LOGIN_SERVER }}/${{ vars.FRONTEND_IMAGE_NAME }}" \
             --set image.tag="${{ github.event.inputs.frontend_tag || 'latest' }}" \
             --set config.apiUrl="/api" \
             --set domain="${{ vars.DOMAIN }}"

@@ -17,6 +17,9 @@ config:
   port: 80
   apiUrl: ""  # Set via --set in GitHub Actions
 
+# Domain configuration (set via --set in GitHub Actions)
+domain: ""
+
 # ConfigMap name
 configMap:
   name: campus-connect-frontend-config

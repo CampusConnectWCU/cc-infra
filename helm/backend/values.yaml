@@ -28,6 +28,16 @@ redis:
   port: ""   # Set via --set in GitHub Actions
   ssl: ""    # Set via --set in GitHub Actions
 
+# Domain configuration (set via --set in GitHub Actions)
+domain: ""
+
 # ConfigMap and Secret names
 configMap:
   name: campus-connect-backend-config
+
+# Secrets configuration (set via --set-string in GitHub Actions)
+secrets:
+  mongodb_uri: ""
+  redis_key: ""
+  encryption_key: ""
+  session_secret: ""
