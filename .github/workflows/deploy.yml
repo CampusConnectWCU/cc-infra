@@ -83,9 +83,31 @@ jobs:
         run: |
           # Parse MongoDB URI to extract host, port, and database
           MONGODB_URI="${{ secrets.MONGODB_URI }}"
-          MONGO_HOST=$(echo "$MONGODB_URI" | sed -n 's/.*@\([^:]*\).*/\1/p')
-          MONGO_PORT=$(echo "$MONGODB_URI" | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
-          MONGO_DB=$(echo "$MONGODB_URI" | sed -n 's/.*\/\([^?]*\).*/\1/p') 
+          
+          # Extract host (everything after @ and before / or ?)
+          MONGO_HOST=$(echo "$MONGODB_URI" | sed -E 's/.*@([^/?]+).*/\1/')
+          
+          # For mongodb+srv, default port is 27017
+          if echo "$MONGODB_URI" | grep -q "mongodb\+srv://"; then
+            MONGO_PORT="27017"
+          elif echo "$MONGODB_URI" | grep -q ":[0-9]\+/"; then
+            MONGO_PORT=$(echo "$MONGODB_URI" | sed -E 's/.*:([0-9]+)\/.*/\1/')
+          else
+            MONGO_PORT="27017"
+          fi
+          
+          # For mongodb+srv, the database name is not in the URI, use default
+          if echo "$MONGODB_URI" | grep -q "mongodb\+srv://"; then
+            MONGO_DB="campusconnect"
+          else
+            # Extract database name (everything after last / and before ?)
+            MONGO_DB=$(echo "$MONGODB_URI" | sed -E 's/.*\/([^?]+).*/\1/')
+          fi
+          
+          # Fallback values if parsing fails
+          MONGO_HOST=${MONGO_HOST:-"localhost"}
+          MONGO_PORT=${MONGO_PORT:-"27017"}
+          MONGO_DB=${MONGO_DB:-"campusconnect"}
           
           echo "Parsed MongoDB config: Host=$MONGO_HOST, Port=$MONGO_PORT, DB=$MONGO_DB"
           
