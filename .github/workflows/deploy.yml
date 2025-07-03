@@ -2,10 +2,15 @@ name: Deploy to Azure Kubernetes Service
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "helm/**"
+    inputs:
+      backend_tag:
+        description: "Backend image tag to deploy (e.g., v1.0.0, latest)"
+        required: true
+        default: "latest"
+      frontend_tag:
+        description: "Frontend image tag to deploy (e.g., v1.0.0, latest)"
+        required: true
+        default: "latest"
 
 env:
   ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
@@ -67,8 +72,12 @@ jobs:
             --set letsencrypt.email="${{ vars.LETSENCRYPT_EMAIL }}" \
             --set domain="${{ vars.DOMAIN }}"
 
-      - name: Set TAG
-        run: echo "TAG=${{ vars.TAG_POLICY }}" >> $GITHUB_ENV
+      - name: Set Tags
+        run: |
+          echo "BACKEND_TAG=${{ github.event.inputs.backend_tag }}" >> $GITHUB_ENV
+          echo "FRONTEND_TAG=${{ github.event.inputs.frontend_tag }}" >> $GITHUB_ENV
+          echo "Deploying backend with tag: ${{ github.event.inputs.backend_tag }}"
+          echo "Deploying frontend with tag: ${{ github.event.inputs.frontend_tag }}"
 
       - name: Ensure namespace exists
         run: |
@@ -80,10 +89,11 @@ jobs:
           MONGO_PORT="27017"
           MONGO_DB="CampusConnect-Prod"
           echo "MongoDB config: Host=$MONGO_HOST, Port=$MONGO_PORT, DB=$MONGO_DB"
+          echo "Deploying backend with tag: ${{ env.BACKEND_TAG }}"
           helm upgrade --install backend ./helm/backend \
             --namespace campus-connect --create-namespace \
             --set image.repository="${{ env.ACR_LOGIN_SERVER }}/${{ vars.BACKEND_IMAGE_NAME }}" \
-            --set image.tag="${{ env.TAG }}" \
+            --set image.tag="${{ env.BACKEND_TAG }}" \
             --set redis.host="${{ vars.REDIS_HOSTNAME }}" \
             --set redis.port="6380" \
             --set redis.ssl="true" \
@@ -98,10 +108,11 @@ jobs:
 
       - name: Deploy Frontend
         run: |
+          echo "Deploying frontend with tag: ${{ env.FRONTEND_TAG }}"
           helm upgrade --install frontend ./helm/frontend \
             --namespace campus-connect --create-namespace \
             --set image.repository="${{ env.ACR_LOGIN_SERVER }}/${{ vars.FRONTEND_IMAGE_NAME }}" \
-            --set image.tag="${{ env.TAG }}" \
+            --set image.tag="${{ env.FRONTEND_TAG }}" \
             --set config.apiUrl="/api" \
             --set domain="${{ vars.DOMAIN }}"
 

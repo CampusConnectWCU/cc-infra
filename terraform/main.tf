@@ -69,9 +69,50 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 }
 
-# allow AKS to pull from your ACR
+# Role Assignments for AKS
+
+# 1) AKS kubelet identity needs AcrPull on ACR
 resource "azurerm_role_assignment" "acr_pull" {
   scope                = azurerm_container_registry.acr.id
   role_definition_name = "AcrPull"
   principal_id         = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+}
+
+# 2) AKS cluster identity needs Network Contributor for Azure CNI
+resource "azurerm_role_assignment" "aks_network_contributor" {
+  scope                = azurerm_resource_group.rg.id
+  role_definition_name = "Network Contributor"
+  principal_id         = azurerm_kubernetes_cluster.aks.identity[0].principal_id
+}
+
+# 3) AKS cluster identity needs DNS Zone Contributor for DNS management
+resource "azurerm_role_assignment" "aks_dns_contributor" {
+  scope                = azurerm_dns_zone.campus.id
+  role_definition_name = "DNS Zone Contributor"
+  principal_id         = azurerm_kubernetes_cluster.aks.identity[0].principal_id
+}
+
+# 4) AKS cluster identity needs Contributor on the AKS resource group for Azure CNI
+resource "azurerm_role_assignment" "aks_contributor" {
+  scope                = azurerm_resource_group.rg.id
+  role_definition_name = "Contributor"
+  principal_id         = azurerm_kubernetes_cluster.aks.identity[0].principal_id
+}
+
+# 5) AKS kubelet identity needs Network Contributor for Azure CNI
+resource "azurerm_role_assignment" "aks_kubelet_network_contributor" {
+  scope                = azurerm_resource_group.rg.id
+  role_definition_name = "Network Contributor"
+  principal_id         = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+}
+
+# Additional outputs for debugging and CI/CD
+output "aks_identity_principal_id" {
+  description = "AKS cluster identity principal ID"
+  value       = azurerm_kubernetes_cluster.aks.identity[0].principal_id
+}
+
+output "aks_kubelet_identity_object_id" {
+  description = "AKS kubelet identity object ID"
+  value       = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
 }
