@@ -52,6 +52,13 @@ jobs:
             --version v1.13.3 \
             --set installCRDs=true
 
+          # Wait for cert-manager to be ready
+          echo "Waiting for cert-manager to be ready..."
+          
+          kubectl rollout status deployment/cert-manager -n cert-manager --timeout=120s
+          kubectl rollout status deployment/cert-manager-webhook -n cert-manager --timeout=120s
+          kubectl rollout status deployment/cert-manager-cainjector -n cert-manager --timeout=120s
+
           # Wait for the cert-manager ClusterIssuer CRD to exist (max 60s)
           echo "Waiting for cert-manager CRDs to be created..."
           for i in {1..12}; do
@@ -68,6 +75,10 @@ jobs:
             echo "❌ Timed out waiting for clusterissuers.cert-manager.io CRD."
             exit 1
           fi
+
+          # Wait a bit more for webhooks to be fully ready
+          echo "Waiting for cert-manager webhooks to be fully ready..."
+          sleep 10
 
       - name: Install NGINX Ingress Controller
         run: |
@@ -95,6 +106,10 @@ jobs:
             --set basicAuth.password="${{ secrets.ADMIN_PASS }}"
           kubectl rollout status deployment/keel -n keel --timeout=120s
 
+      - name: Ensure namespace exists
+        run: |
+          kubectl get namespace campus-connect || kubectl create namespace campus-connect
+
       - name: Deploy Shared Resources
         run: |
           helm upgrade --install shared ./helm/shared \
@@ -107,10 +122,6 @@ jobs:
           echo "FRONTEND_TAG=${{ github.event.inputs.frontend_tag }}" >> $GITHUB_ENV
           echo "Deploying backend with tag: ${{ github.event.inputs.backend_tag }}"
           echo "Deploying frontend with tag: ${{ github.event.inputs.frontend_tag }}"
-
-      - name: Ensure namespace exists
-        run: |
-          kubectl get namespace campus-connect || kubectl create namespace campus-connect
 
       - name: Deploy Backend
         run: |

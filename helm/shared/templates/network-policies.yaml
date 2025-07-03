@@ -49,7 +49,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: backend-network-policy
-  namespace: default
+  namespace: campus-connect
 spec:
   podSelector:
     matchLabels:
@@ -97,7 +97,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: frontend-network-policy
-  namespace: default
+  namespace: campus-connect
 spec:
   podSelector:
     matchLabels:
