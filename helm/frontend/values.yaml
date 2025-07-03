@@ -13,6 +13,8 @@ service:
 
 # Application Configuration
 config:
+  nodeEnv: "production"
+  port: 80
   apiUrl: "/api"
   domain: ""
 

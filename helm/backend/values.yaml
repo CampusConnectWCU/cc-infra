@@ -21,6 +21,7 @@ config:
   cookieSecure: "true"  # HTTPS cookies for production
   cookieSameSite: "strict"
   logLevel: "info"
+  corsOrigin: ""  # Set via --set in GitHub Actions
 
 # Redis configuration (all set via --set)
 redis:

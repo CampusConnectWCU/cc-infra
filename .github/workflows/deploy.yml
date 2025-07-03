@@ -180,9 +180,10 @@ jobs:
             --set config.host="0.0.0.0" \
             --set config.port="3000" \
             --set config.apiPrefix="/api" \
-            --set config.sessionLifetime="1h" \
+            --set config.sessionLifetime="86400000" \
             --set config.cookieSecure="true" \
             --set config.cookieSameSite="Strict" \
+            --set config.corsOrigin="${{ vars.DOMAIN }}" \
             --set-string secrets.mongodb_uri="${{ secrets.MONGODB_URI }}" \
             --set-string secrets.redis_key="${{ secrets.REDIS_KEY }}" \
             --set-string secrets.encryption_key="${{ secrets.ENCRYPTION_KEY }}" \

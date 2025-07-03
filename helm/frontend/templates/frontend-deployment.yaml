@@ -21,9 +21,14 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+      volumes:
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-temp
+          emptyDir: {}
       containers:
         - name: frontend
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -33,6 +38,11 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ .Values.configMap.name }}
+          volumeMounts:
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-temp
+              mountPath: /tmp
           resources:
             requests:
               memory: {{ .Values.resources.requests.memory }}
@@ -42,9 +52,10 @@ spec:
               cpu: {{ .Values.resources.limits.cpu }}
           securityContext:
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
+            readOnlyRootFilesystem: false
             runAsNonRoot: true
-            runAsUser: 1000
+            runAsUser: 101
+            runAsGroup: 101
             capabilities:
               drop:
                 - ALL
