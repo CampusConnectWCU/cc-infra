@@ -71,7 +71,7 @@ jobs:
             --create-namespace \
             --set controller.service.loadBalancerIP="${{ vars.INGRESS_IP }}"
           # Wait for ingress controller to be ready
-          kubectl rollout status deployment/ingress-nginx-controller -n ingress-ngiWnx --timeout=120s
+          kubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx --timeout=120s
 
       - name: Deploy Shared Resources
         run: |
