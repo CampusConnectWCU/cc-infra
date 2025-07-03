@@ -94,13 +94,12 @@ jobs:
             --set redis.host="${{ vars.REDIS_HOSTNAME }}" \
             --set redis.port="6380" \
             --set redis.ssl="true" \
-            --set redis.password="${{ secrets.AZURE_REDIS_KEY }}" \
             --set domain="${{ vars.DOMAIN }}" \
             --set mongodb.host="$MONGO_HOST" \
             --set mongodb.port="$MONGO_PORT" \
             --set mongodb.database="$MONGO_DB" \
             --set-string secrets.mongodb_uri="${{ secrets.MONGODB_URI }}" \
-            --set-string secrets.redis_key="${{ secrets.AZURE_REDIS_KEY }}" \
+            --set-string secrets.redis_key="${{ secrets.REDIS_KEY }}" \
             --set-string secrets.encryption_key="${{ secrets.ENCRYPTION_KEY }}" \
             --set-string secrets.session_secret="${{ secrets.SESSION_SECRET }}"
 
