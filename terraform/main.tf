@@ -186,8 +186,22 @@ resource "azurerm_network_security_group" "aks_nsg" {
   
   # Allow all outbound traffic (AKS needs this for pulling images, etc.)
   security_rule {
-    name                       = "AllowAllOutbound"
+    name                       = "AllowRedisOutbound"
     priority                   = 100
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "6380"
+    source_address_prefix      = "*"
+    destination_address_prefix = "AzureRedisCache"
+    description                = "Allow outbound traffic to Azure Redis Cache on SSL port"
+  }
+  
+  # Allow all other outbound traffic (AKS needs this for pulling images, etc.)
+  security_rule {
+    name                       = "AllowAllOutbound"
+    priority                   = 110
     direction                  = "Outbound"
     access                     = "Allow"
     protocol                   = "*"
@@ -195,7 +209,7 @@ resource "azurerm_network_security_group" "aks_nsg" {
     destination_port_range     = "*"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "Allow all outbound traffic"
+    description                = "Allow all other outbound traffic"
   }
   
   tags = {
@@ -220,11 +234,9 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   default_node_pool {
     name                = "agentpool"
-    node_count          = var.node_count
     vm_size             = var.vm_size
     vnet_subnet_id      = azurerm_subnet.aks_subnet.id
-    enable_auto_scaling = true
-    min_count           = 2
+    min_count           = 1
     max_count           = 5
     
     # Node pool tags
