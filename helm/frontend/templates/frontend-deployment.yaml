@@ -24,25 +24,12 @@ spec:
         runAsUser: 0
         runAsGroup: 0
         fsGroup: 0
-      volumes:
-        - name: nginx-cache
-          emptyDir: {}
-        - name: nginx-temp
-          emptyDir: {}
       containers:
         - name: frontend
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.port }}
-          envFrom:
-            - configMapRef:
-                name: {{ .Values.configMap.name }}
-          volumeMounts:
-            - name: nginx-cache
-              mountPath: /var/cache/nginx
-            - name: nginx-temp
-              mountPath: /tmp
           resources:
             requests:
               memory: {{ .Values.resources.requests.memory }}
@@ -55,7 +42,6 @@ spec:
             readOnlyRootFilesystem: false
             runAsNonRoot: false
             runAsUser: 0
-            runAsGroup: 0
             capabilities:
               drop:
                 - ALL
