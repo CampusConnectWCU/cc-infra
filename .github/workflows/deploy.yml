@@ -169,7 +169,6 @@ jobs:
             --namespace campus-connect --create-namespace \
             --set image.repository="${{ env.ACR_LOGIN_SERVER }}/${{ vars.BACKEND_IMAGE_NAME }}" \
             --set image.tag="${{ env.BACKEND_TAG }}" \
-
             --set domain="${{ vars.DOMAIN }}" \
             --set mongodb.host="$MONGO_HOST" \
             --set mongodb.port="$MONGO_PORT" \
