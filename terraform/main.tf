@@ -24,26 +24,7 @@ resource "azurerm_container_registry" "acr" {
   }
 }
 
-
-
-# 4) Static Public IP (for ingress controller)
-resource "azurerm_public_ip" "ingress_ip" {
-  name                = local.ingress_ip_name
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-  allocation_method   = "Static"
-  sku                 = "Standard"
-  
-  # Add DNS label for easier management
-  domain_name_label = "campusconnect-ingress"
-  
-  tags = {
-    Environment = "production"
-    Project     = "campus-connect"
-  }
-}
-
-# 5) Create an Azure DNS Zone for the IONOS-registered domain
+# 3) Create an Azure DNS Zone for the IONOS-registered domain
 resource "azurerm_dns_zone" "campus" {
   name                = var.domain_name              # campusconnectwcu.com
   resource_group_name = azurerm_resource_group.rg.name
@@ -54,7 +35,9 @@ resource "azurerm_dns_zone" "campus" {
   }
 }
 
-# 6) DNS A record for campusconnectwcu.com → ingress IP
+
+
+# 5) DNS A record for campusconnectwcu.com → ingress IP
 resource "azurerm_dns_a_record" "frontend" {
   name                = "@"
   zone_name           = azurerm_dns_zone.campus.name
@@ -63,7 +46,7 @@ resource "azurerm_dns_a_record" "frontend" {
   records             = [ azurerm_public_ip.ingress_ip.ip_address ]
 }
 
-# 7) CNAME record for admin.campusconnectwcu.com → campusconnectwcu.com
+# 6) CNAME record for admin.campusconnectwcu.com → campusconnectwcu.com
 resource "azurerm_dns_cname_record" "admin" {
   name                = "admin"
   zone_name           = azurerm_dns_zone.campus.name
@@ -72,7 +55,7 @@ resource "azurerm_dns_cname_record" "admin" {
   record              = azurerm_dns_zone.campus.name
 }
 
-# 8) Virtual Network for AKS
+# 7) Virtual Network for AKS
 resource "azurerm_virtual_network" "aks_vnet" {
   name                = "${var.prefix}-vnet"
   resource_group_name = azurerm_resource_group.rg.name
@@ -85,7 +68,7 @@ resource "azurerm_virtual_network" "aks_vnet" {
   }
 }
 
-# 9) Subnet for AKS
+# 8) Subnet for AKS
 resource "azurerm_subnet" "aks_subnet" {
   name                 = "${var.prefix}-aks-subnet"
   resource_group_name  = azurerm_resource_group.rg.name
@@ -101,7 +84,7 @@ resource "azurerm_subnet" "aks_subnet" {
   # No delegation on node subnet (required for Azure CNI pod subnet model)
 }
 
-# 10) Network Security Group for AKS with comprehensive rules
+# 9) Network Security Group for AKS with comprehensive rules
 resource "azurerm_network_security_group" "aks_nsg" {
   name                = "${var.prefix}-aks-nsg"
   location            = azurerm_resource_group.rg.location
@@ -185,13 +168,13 @@ resource "azurerm_network_security_group" "aks_nsg" {
   }
 }
 
-# 11) Associate NSG with subnet
+# 10) Associate NSG with subnet
 resource "azurerm_subnet_network_security_group_association" "aks_nsg_association" {
   subnet_id                 = azurerm_subnet.aks_subnet.id
   network_security_group_id = azurerm_network_security_group.aks_nsg.id
 }
 
-# 12) Enhanced AKS Cluster
+# 11) Enhanced AKS Cluster
 resource "azurerm_kubernetes_cluster" "aks" {
   name                = local.aks_name        # e.g. "cc-prod-aks"
   location            = var.location
@@ -245,6 +228,23 @@ resource "azurerm_kubernetes_cluster" "aks" {
     scale_down_delay_after_add = "15m"
     scale_down_unneeded       = "15m"
   }
+  tags = {
+    Environment = "production"
+    Project     = "campus-connect"
+  }
+}
+
+# 12) Static Public IP (for ingress controller) - Create in AKS node resource group
+resource "azurerm_public_ip" "ingress_ip" {
+  name                = local.ingress_ip_name
+  resource_group_name = azurerm_kubernetes_cluster.aks.node_resource_group
+  location            = azurerm_resource_group.rg.location
+  allocation_method   = "Static"
+  sku                 = "Standard"
+  
+  # Add DNS label for easier management
+  domain_name_label = "campusconnect-ingress"
+  
   tags = {
     Environment = "production"
     Project     = "campus-connect"
