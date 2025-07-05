@@ -24,33 +24,7 @@ resource "azurerm_container_registry" "acr" {
   }
 }
 
-# 3) Redis Cache with enhanced security
-resource "azurerm_redis_cache" "redis" {
-  name                = local.redis_name
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-  sku_name            = "Standard"
-  family              = "C"
-  capacity            = 1
-  minimum_tls_version = "1.2"
-  
-  # Enable Redis persistence
-  non_ssl_port_enabled = false
-  
-  # Redis configuration
-  redis_configuration {
-    maxmemory_reserved = 50
-    maxmemory_delta    = 50
-    maxmemory_policy   = "volatile-lru"
-  }
-  
-  # Note: Firewall rules will be configured separately below
-  
-  tags = {
-    Environment = "production"
-    Project     = "campus-connect"
-  }
-}
+
 
 # 4) Static Public IP (for ingress controller)
 resource "azurerm_public_ip" "ingress_ip" {
@@ -119,7 +93,12 @@ resource "azurerm_subnet" "aks_subnet" {
   address_prefixes     = ["10.0.1.0/24"]
   
   # Enable service endpoints for ACR
-  service_endpoints = ["Microsoft.ContainerRegistry", "Microsoft.KeyVault"]
+  service_endpoints = [
+    "Microsoft.ContainerRegistry",
+    "Microsoft.KeyVault"
+  ]
+
+  # No delegation on node subnet (required for Azure CNI pod subnet model)
 }
 
 # 10) Network Security Group for AKS with comprehensive rules
@@ -184,19 +163,7 @@ resource "azurerm_network_security_group" "aks_nsg" {
     description                = "Deny all other inbound traffic"
   }
   
-  # Allow all outbound traffic (AKS needs this for pulling images, etc.)
-  security_rule {
-    name                       = "AllowRedisOutbound"
-    priority                   = 100
-    direction                  = "Outbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "6380"
-    source_address_prefix      = "*"
-    destination_address_prefix = "AzureRedisCache"
-    description                = "Allow outbound traffic to Azure Redis Cache on SSL port"
-  }
+
   
   # Allow all other outbound traffic (AKS needs this for pulling images, etc.)
   security_rule {
@@ -238,6 +205,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     vnet_subnet_id      = azurerm_subnet.aks_subnet.id
     min_count           = 1
     max_count           = 5
+    auto_scaling_enabled = true
     
     # Node pool tags
     tags = {
@@ -277,15 +245,6 @@ resource "azurerm_kubernetes_cluster" "aks" {
     scale_down_delay_after_add = "15m"
     scale_down_unneeded       = "15m"
   }
-  
-  # Enable maintenance window
-  maintenance_window {
-    allowed {
-      day   = "Sunday"
-      hours = [0, 1, 2, 3, 4, 5, 6]
-    }
-  }
-  
   tags = {
     Environment = "production"
     Project     = "campus-connect"
@@ -436,11 +395,20 @@ resource "azurerm_role_assignment" "current_user_key_vault_admin" {
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
-# 20) Redis Cache Firewall Rule - Allow AKS subnet
-resource "azurerm_redis_firewall_rule" "aks_subnet" {
-  name                = "akssubnet"
-  redis_cache_name    = azurerm_redis_cache.redis.name
-  resource_group_name = azurerm_resource_group.rg.name
-  start_ip            = cidrhost(azurerm_subnet.aks_subnet.address_prefixes[0], 0)
-  end_ip              = cidrhost(azurerm_subnet.aks_subnet.address_prefixes[0], -1)
+
+
+# 10) Subnet for AKS Pods
+resource "azurerm_subnet" "aks_pod_subnet" {
+  name                 = "${var.prefix}-pod-subnet"
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.aks_vnet.name
+  address_prefixes     = ["10.0.2.0/24"]
+
+  delegation {
+    name = "aksPods"
+    service_delegation {
+      name    = "Microsoft.ContainerService/managedClusters"
+      actions = ["Microsoft.Network/virtualNetworks/subnets/action"]
+    }
+  }
 }

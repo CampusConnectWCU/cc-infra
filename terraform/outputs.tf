@@ -15,16 +15,7 @@ output "aks_rg" {
   value       = azurerm_resource_group.rg.name
 }
 
-output "redis_hostname" {
-  description = "Azure Redis hostname"
-  value       = azurerm_redis_cache.redis.hostname
-}
 
-output "redis_primary_key" {
-  description = "Primary access key for Redis"
-  value       = azurerm_redis_cache.redis.primary_access_key
-  sensitive   = true
-}
 
 output "frontend_ip" {
   description = "Static IP for ingress"

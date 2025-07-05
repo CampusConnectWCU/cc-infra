@@ -169,9 +169,7 @@ jobs:
             --namespace campus-connect --create-namespace \
             --set image.repository="${{ env.ACR_LOGIN_SERVER }}/${{ vars.BACKEND_IMAGE_NAME }}" \
             --set image.tag="${{ env.BACKEND_TAG }}" \
-            --set redis.host="${{ vars.REDIS_HOSTNAME }}" \
-            --set redis.port="6380" \
-            --set redis.ssl="true" \
+
             --set domain="${{ vars.DOMAIN }}" \
             --set mongodb.host="$MONGO_HOST" \
             --set mongodb.port="$MONGO_PORT" \
@@ -185,9 +183,9 @@ jobs:
             --set config.cookieSameSite="Strict" \
             --set config.corsOrigin="${{ vars.DOMAIN }}" \
             --set-string secrets.mongodb_uri="${{ secrets.MONGODB_URI }}" \
-            --set-string secrets.redis_key="${{ secrets.REDIS_KEY }}" \
             --set-string secrets.encryption_key="${{ secrets.ENCRYPTION_KEY }}" \
-            --set-string secrets.session_secret="${{ secrets.SESSION_SECRET }}"
+            --set-string secrets.session_secret="${{ secrets.SESSION_SECRET }}" \
+            --set-string secrets.jwt_secret="${{ secrets.JWT_SECRET }}"
 
       - name: Deploy Frontend
         run: |

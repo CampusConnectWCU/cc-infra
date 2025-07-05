@@ -6,8 +6,7 @@ locals {
   # Container Registry
   acr_name        = "${replace(var.prefix, "-", "")}acr"
 
-  # Redis Cache
-  redis_name      = "${var.prefix}-redis"
+
 
   # Static Public IP for ingress controller
   ingress_ip_name = "${var.prefix}-ip"

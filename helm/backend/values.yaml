@@ -23,11 +23,7 @@ config:
   logLevel: "info"
   corsOrigin: ""  # Set via --set in GitHub Actions
 
-# Redis configuration (all set via --set)
-redis:
-  host: ""   # Set via --set in GitHub Actions
-  port: ""   # Set via --set in GitHub Actions
-  ssl: ""    # Set via --set in GitHub Actions
+
 
 # MongoDB configuration (set via --set in GitHub Actions)
 mongodb:
@@ -45,9 +41,9 @@ configMap:
 # Secrets configuration (set via --set-string in GitHub Actions)
 secrets:
   mongodb_uri: ""
-  redis_key: ""
   encryption_key: ""
   session_secret: ""
+  jwt_secret: ""
 
 # Resource limits (reduced for B2s nodes)
 resources:
