@@ -68,6 +68,23 @@ resource "azurerm_kubernetes_cluster" "main" {
   tags = var.tags
 }
 
+# DNS Zone
+resource "azurerm_dns_zone" "main" {
+  name                = "campusconnectwcu.com"
+  resource_group_name = azurerm_resource_group.main.name
+  tags                = var.tags
+}
+
+# DNS A Record for the domain
+resource "azurerm_dns_a_record" "main" {
+  name                = "@"
+  zone_name           = azurerm_dns_zone.main.name
+  resource_group_name = azurerm_resource_group.main.name
+  ttl                 = 300
+  records             = ["172.212.55.131"]  # Current ingress controller IP
+  tags                = var.tags
+}
+
 # ACR Pull Role Assignment
 resource "azurerm_role_assignment" "aks_acr_pull" {
   principal_id         = azurerm_kubernetes_cluster.main.kubelet_identity[0].object_id

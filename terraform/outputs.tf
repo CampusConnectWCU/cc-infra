@@ -28,3 +28,13 @@ output "kube_config" {
   value       = azurerm_kubernetes_cluster.main.kube_config_raw
   sensitive   = true
 }
+
+output "dns_zone_nameservers" {
+  description = "DNS zone nameservers"
+  value       = azurerm_dns_zone.main.name_servers
+}
+
+output "dns_zone_name" {
+  description = "DNS zone name"
+  value       = azurerm_dns_zone.main.name
+}
