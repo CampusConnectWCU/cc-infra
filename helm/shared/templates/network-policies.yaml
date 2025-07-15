@@ -52,6 +52,7 @@
 #   namespace: campus-connect
 # spec:
 #   podSelector:
+#     matchLabels:
 #       app: campus-connect-backend
 #   policyTypes:
 #   - Ingress
