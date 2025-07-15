@@ -8,3 +8,4 @@ tfplan
 *.txt
 *.json
 security-audit.sh
+**.tfstate**

@@ -1,49 +1,27 @@
 variable "location" {
-  type    = string
-  default = "eastus"
-}
-
-variable "prefix" {
-  type    = string
-  default = "cc-prod-2025"
-}
-
-variable "domain_name" {
-  description = "Campus Connect domain name"
+  description = "Azure region for resources"
   type        = string
-  default     = "campusconnectwcu.com"
+  default     = "eastus"
 }
 
-variable "kubernetes_version" {
-  description = "Kubernetes version for AKS cluster"
+variable "project_name" {
+  description = "Project name used for resource naming"
   type        = string
-  default     = "1.33.1"
+  default     = "campus-connect"
 }
 
-variable "node_count" {
-  description = "Number of nodes in the default node pool"
-  type        = number
-  default     = 2
+variable "resource_group_name" {
+  description = "Name of the resource group"
+  type        = string
+  default     = "campus-connect-rg"
 }
 
-variable "vm_size" {
-  description = "VM size for AKS nodes"
-  type        = string
-  default     = "Standard_B2s"
-}
-
-variable "allowed_ssh_ip" {
-  description = "IP address allowed for SSH access (whitelisted IPs)"
-  type        = string
-  default     = "174.220.80.160/32"
-}
-
-variable "environment" {
-  description = "Environment name"
-  type        = string
-  default     = "production"
-}
-variable "subscription_id" {
-  description = "Azure Subscription ID"
-  type        = string
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default = {
+    Environment = "production"
+    Project     = "campus-connect"
+    ManagedBy   = "terraform"
+  }
 }
